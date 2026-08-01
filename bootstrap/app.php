@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'client' => EnsureClientAccess::class,
         ]);
 
+        $middleware->trustProxies(at: '*');
+
         $middleware->validateCsrfTokens(except: [
             'dlr/*',
         ]);
