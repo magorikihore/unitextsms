@@ -20,9 +20,9 @@
                     <td class="px-4 py-3">{{ $template->language }}</td>
                     <td class="max-w-md px-4 py-3 text-slate-600">{{ $template->body }}</td>
                     <td class="px-4 py-3">
-                        <div class="flex gap-2">
-                            <form method="POST" action="{{ route('admin.approvals.templates.approve', $template) }}">@csrf<button class="btn-primary">Approve</button></form>
-                            <form method="POST" action="{{ route('admin.approvals.templates.reject', $template) }}">@csrf<button class="btn-danger">Reject</button></form>
+                        <div class="inline-flex gap-1">
+                            <form method="POST" action="{{ route('admin.approvals.templates.approve', $template) }}">@csrf<button class="btn-sm-primary">Approve</button></form>
+                            <form method="POST" action="{{ route('admin.approvals.templates.reject', $template) }}">@csrf<button class="btn-sm-secondary text-red-700">Reject</button></form>
                         </div>
                     </td>
                 </tr>

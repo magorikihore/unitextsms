@@ -35,7 +35,9 @@
                     <td class="px-4 py-3">{{ $message->to_phone_normalized }}</td>
                     <td class="px-4 py-3">{{ $message->status->value }}</td>
                     <td class="px-4 py-3">{{ $message->units }}</td>
-                    <td class="px-4 py-3">{{ $message->failure_reason }}</td>
+                    <td class="px-4 py-3 {{ $message->failure_reason ? 'text-red-700' : 'text-slate-400' }}">
+                        {{ \App\Support\SmsStatusPresenter::humanize($message->failure_reason) ?: '—' }}
+                    </td>
                 </tr>
             @endforeach
             </tbody>

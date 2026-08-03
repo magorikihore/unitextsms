@@ -1,19 +1,20 @@
 <x-portal-layout title="Providers" portalLabel="Administration" header="Providers & Routes" :nav="\App\Support\PortalNav::admin('providers')">
-    <form method="POST" action="{{ route('admin.providers.store') }}" class="table-wrap mb-6 grid gap-3 p-5 md:grid-cols-3">
+    <form method="POST" action="{{ route('admin.providers.store') }}" data-ajax class="table-wrap mb-4 grid gap-2 p-3 md:grid-cols-3" novalidate>
         @csrf
-        <input name="name" class="input-field" placeholder="Provider name" required>
-        <select name="driver" class="input-field">
+        <div data-form-error class="hidden md:col-span-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-700"></div>
+        <input name="name" class="input-field-sm" placeholder="Provider name">
+        <select name="driver" class="input-field-sm">
             <option value="log">Log (dev)</option>
             <option value="jasmin">Jasmin HTTP</option>
         </select>
-        <input type="number" name="rate_limit_per_second" class="input-field" value="18" required>
-        <input type="number" step="0.0001" name="cost_per_sms" class="input-field" value="0.0200" required>
-        <input type="number" step="0.01" name="balance" class="input-field" placeholder="Provider balance">
-        <input name="base_url" class="input-field" placeholder="https://jasmin.example/">
-        <input name="username" class="input-field" placeholder="Username">
-        <input type="password" name="password" class="input-field" placeholder="Password">
-        <input name="webhook_url" class="input-field md:col-span-2" placeholder="DLR webhook URL">
-        <button class="btn-primary">Add provider</button>
+        <input type="number" name="rate_limit_per_second" class="input-field-sm" value="18">
+        <input type="number" step="0.0001" name="cost_per_sms" class="input-field-sm" value="0.0200">
+        <input type="number" step="0.01" name="balance" class="input-field-sm" placeholder="Provider balance">
+        <input name="base_url" class="input-field-sm" placeholder="https://jasmin.example/">
+        <input name="username" class="input-field-sm" placeholder="Username">
+        <x-password-input name="password" size="sm" placeholder="Password" />
+        <input name="webhook_url" class="input-field-sm md:col-span-2" placeholder="DLR webhook URL">
+        <button class="btn-sm-primary" data-loading-text="Saving…">Add provider</button>
     </form>
 
     <div class="space-y-4">

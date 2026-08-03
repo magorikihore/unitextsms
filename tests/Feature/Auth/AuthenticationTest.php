@@ -30,6 +30,44 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_users_can_authenticate_via_ajax_login(): void
+    {
+        $user = User::factory()->platformAdmin()->create();
+
+        $response = $this->postJson('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertOk()
+            ->assertJsonPath('redirect', route('admin.dashboard'));
+    }
+
+    public function test_platform_admin_login_ignores_client_portal_intended_url(): void
+    {
+        $admin = User::factory()->platformAdmin()->create();
+        $client = \App\Models\Client::factory()->create();
+
+        $this->get(route('client.dashboard', $client));
+
+        $this->post('/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect(route('admin.dashboard'));
+    }
+
+    public function test_ajax_login_returns_validation_errors(): void
+    {
+        $response = $this->from('/login')->postJson('/login', [
+            'email' => 'not-an-email',
+            'password' => '',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonStructure(['message', 'errors' => ['email', 'password']]);
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();

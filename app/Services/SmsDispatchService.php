@@ -7,13 +7,14 @@ use App\Enums\ClientStatus;
 use App\Enums\MessageCategory;
 use App\Enums\MessageStatus;
 use App\Enums\SenderIdStatus;
-use App\Jobs\SendSmsMessage;
+use App\Models\ApiCredential;
 use App\Models\Campaign;
 use App\Models\Client;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\SenderId;
 use App\Models\User;
+use App\Support\SmsJobFactory;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -34,12 +35,13 @@ class SmsDispatchService
      */
     public function sendSingle(
         Client $client,
-        User $user,
+        ?User $user,
         SenderId $senderId,
         string $to,
         string $body,
         MessageCategory $category = MessageCategory::Transactional,
         array $vars = [],
+        ?ApiCredential $apiCredential = null,
     ): Message {
         $this->assertClientCanSend($client, $category);
         $this->assertSender($client, $senderId, $category);
@@ -50,34 +52,66 @@ class SmsDispatchService
         }
 
         $rendered = $this->personalizer->render($body, $vars);
-        $units = $this->smsCounter->units($rendered);
-        $charge = round($units * (float) $client->price_per_sms, 4);
+        $segments = $this->smsCounter->segments($rendered);
+        $units = count($segments);
+        $unitPrice = (float) $client->price_per_sms;
+        $charge = round($units * $unitPrice, 4);
 
-        return DB::transaction(function () use ($client, $user, $senderId, $to, $normalized, $rendered, $category, $units, $charge) {
-            $message = Message::query()->create([
-                'client_id' => $client->id,
-                'sender_id_id' => $senderId->id,
-                'created_by' => $user->id,
-                'to_phone' => $to,
-                'to_phone_normalized' => $normalized,
-                'from_sender' => $senderId->sender,
-                'body' => $rendered,
-                'category' => $category,
-                'status' => MessageStatus::Queued,
-                'queue_name' => $category->queue(),
-                'units' => $units,
-                'client_charge' => $charge,
-                'provider_cost' => $client->defaultProvider?->cost_per_sms ?? 0,
-                'sms_provider_id' => $client->default_provider_id,
-                'queued_at' => now(),
-            ]);
+        return DB::transaction(function () use ($client, $user, $senderId, $to, $normalized, $rendered, $segments, $category, $units, $unitPrice, $charge, $apiCredential) {
+            $groupId = (string) str()->uuid();
+            $messages = [];
 
-            $this->ledger->debit($client, (float) $charge, 'SMS send '.$message->uuid, $user, $message);
-            SendSmsMessage::dispatch($message->id)->onQueue($category->queue());
+            foreach ($segments as $index => $segmentBody) {
+                $meta = [
+                    'segment_group' => $groupId,
+                    'segment_index' => $index + 1,
+                    'segment_total' => $units,
+                    'original_body' => $rendered,
+                ];
+                if ($apiCredential) {
+                    $meta['source'] = 'api';
+                    $meta['api_key_id'] = $apiCredential->key_id;
+                    $meta['sandbox'] = $apiCredential->sandbox;
+                }
 
-            $this->auditLogger->log('sms.single.queued', $message, null, $message->toArray(), $user, $client->id);
+                $messages[] = Message::query()->create([
+                    'client_id' => $client->id,
+                    'sender_id_id' => $senderId->id,
+                    'created_by' => $user?->id,
+                    'api_credential_id' => $apiCredential?->id,
+                    'to_phone' => $to,
+                    'to_phone_normalized' => $normalized,
+                    'from_sender' => $senderId->sender,
+                    'body' => $segmentBody,
+                    'category' => $category,
+                    'status' => MessageStatus::Queued,
+                    'queue_name' => $category->queue(),
+                    'units' => 1,
+                    'client_charge' => round($unitPrice, 4),
+                    'provider_cost' => $client->defaultProvider?->cost_per_sms ?? 0,
+                    'sms_provider_id' => $client->default_provider_id,
+                    'queued_at' => now(),
+                    'expires_at' => $category->isOtp()
+                        ? now()->addMinutes((int) config('sms.otp.ttl_minutes', 5))
+                        : null,
+                    'meta' => $meta,
+                ]);
+            }
 
-            return $message;
+            $primary = $messages[0];
+            $this->ledger->debit($client, (float) $charge, 'SMS send '.$primary->uuid.($units > 1 ? " ({$units} parts)" : ''), $user, $primary);
+
+            foreach ($messages as $message) {
+                SmsJobFactory::dispatch($message);
+            }
+
+            $this->auditLogger->log('sms.single.queued', $primary, null, [
+                'message' => $primary->toArray(),
+                'segment_total' => $units,
+                'total_charge' => $charge,
+            ], $user, $client->id);
+
+            return $primary;
         });
     }
 
@@ -92,7 +126,7 @@ class SmsDispatchService
         bool $launch = false,
         bool $schedule = false,
     ): Campaign {
-        $category = MessageCategory::from($data['category'] ?? MessageCategory::Marketing->value);
+        $category = MessageCategory::normalize((string) ($data['category'] ?? MessageCategory::Marketing->value));
         $this->assertClientCanSend($client, $category);
 
         /** @var SenderId $senderId */
@@ -176,24 +210,21 @@ class SmsDispatchService
             throw new RuntimeException('Insufficient balance to launch campaign.');
         }
 
-        $units = $this->smsCounter->units($campaign->message_body);
-        $chargePer = round($units * (float) $client->price_per_sms, 4);
-        $totalCharge = round(count($validNumbers) * $chargePer, 2);
+        $unitPrice = (float) $client->price_per_sms;
+        // Charge estimate uses template body; actual segments use personalized body per recipient.
+        $templateUnits = $this->smsCounter->units($campaign->message_body);
+        $chargePerRecipient = round($templateUnits * $unitPrice, 4);
+        $totalCharge = round(count($validNumbers) * $chargePerRecipient, 2);
 
         $this->ledger->debit($client, $totalCharge, 'Campaign launch #'.$campaign->id, $user, $campaign);
-
-        $campaign->update([
-            'status' => CampaignStatus::Processing,
-            'started_at' => now(),
-            'charged_amount' => $totalCharge,
-            'queued_count' => count($validNumbers),
-        ]);
 
         $contacts = Contact::query()
             ->where('client_id', $client->id)
             ->whereIn('phone_normalized', $validNumbers)
             ->get()
             ->keyBy('phone_normalized');
+
+        $queued = [];
 
         foreach ($validNumbers as $number) {
             $contact = $contacts->get($number);
@@ -207,28 +238,48 @@ class SmsDispatchService
             }
 
             $body = $this->personalizer->render($campaign->message_body, $vars);
+            $segments = $this->smsCounter->segments($body);
+            $segmentTotal = count($segments);
+            $groupId = (string) str()->uuid();
 
-            $message = Message::query()->create([
-                'client_id' => $client->id,
-                'campaign_id' => $campaign->id,
-                'sender_id_id' => $senderId->id,
-                'contact_id' => $contact?->id,
-                'created_by' => $user?->id,
-                'to_phone' => $number,
-                'to_phone_normalized' => $number,
-                'from_sender' => $senderId->sender,
-                'body' => $body,
-                'category' => $category,
-                'status' => MessageStatus::Queued,
-                'queue_name' => $category->queue(),
-                'units' => $units,
-                'client_charge' => $chargePer,
-                'provider_cost' => $client->defaultProvider?->cost_per_sms ?? 0,
-                'sms_provider_id' => $client->default_provider_id,
-                'queued_at' => now(),
-            ]);
+            foreach ($segments as $index => $segmentBody) {
+                $queued[] = Message::query()->create([
+                    'client_id' => $client->id,
+                    'campaign_id' => $campaign->id,
+                    'sender_id_id' => $senderId->id,
+                    'contact_id' => $contact?->id,
+                    'created_by' => $user?->id,
+                    'to_phone' => $number,
+                    'to_phone_normalized' => $number,
+                    'from_sender' => $senderId->sender,
+                    'body' => $segmentBody,
+                    'category' => $category,
+                    'status' => MessageStatus::Queued,
+                    'queue_name' => $category->queue(),
+                    'units' => 1,
+                    'client_charge' => round($unitPrice, 4),
+                    'provider_cost' => $client->defaultProvider?->cost_per_sms ?? 0,
+                    'sms_provider_id' => $client->default_provider_id,
+                    'queued_at' => now(),
+                    'meta' => [
+                        'segment_group' => $groupId,
+                        'segment_index' => $index + 1,
+                        'segment_total' => $segmentTotal,
+                        'original_body' => $body,
+                    ],
+                ]);
+            }
+        }
 
-            SendSmsMessage::dispatch($message->id)->onQueue($category->queue());
+        $campaign->update([
+            'status' => CampaignStatus::Processing,
+            'started_at' => now(),
+            'charged_amount' => $totalCharge,
+            'queued_count' => count($queued),
+        ]);
+
+        foreach ($queued as $message) {
+            SmsJobFactory::dispatch($message);
         }
     }
 
@@ -306,10 +357,6 @@ class SmsDispatchService
 
         if ($senderId->status !== SenderIdStatus::Approved || ! $senderId->isUsable()) {
             throw new RuntimeException('Sender ID is not approved.');
-        }
-
-        if ($senderId->category && $senderId->category !== $category) {
-            throw new RuntimeException('Sender ID is restricted to '.$senderId->category->value.' messages.');
         }
     }
 }

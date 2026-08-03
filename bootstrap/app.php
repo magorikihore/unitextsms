@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -17,16 +18,23 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'platform' => EnsurePlatformAdmin::class,
             'client' => EnsureClientAccess::class,
+            'api.credential' => \App\Http\Middleware\AuthenticateApiCredential::class,
+            'dlr.ip' => \App\Http\Middleware\EnsureDlrIpAllowed::class,
         ]);
 
         $middleware->trustProxies(at: '*');
 
         $middleware->validateCsrfTokens(except: [
-            'dlr/*',
+            'dlr/jasmin',
+            'dlr/jasmin-submit-error',
+            'webhooks/payin',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->is('dlr/*'),
+            fn (Request $request) => $request->expectsJson()
+                || $request->ajax()
+                || $request->is('api/*')
+                || $request->is('dlr/*'),
         );
     })->create();

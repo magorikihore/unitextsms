@@ -30,4 +30,9 @@ enum ClientRole: string
     {
         return in_array($this, [self::Owner, self::Manager], true);
     }
+
+    public function canManageSettings(): bool
+    {
+        return in_array($this, [self::Owner, self::Manager], true);
+    }
 }

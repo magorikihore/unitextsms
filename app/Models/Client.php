@@ -42,6 +42,7 @@ class Client extends Model
         'daily_send_limit',
         'monthly_send_limit',
         'default_provider_id',
+        'default_sender_id_id',
         'kyc_documents',
         'notes',
         'approved_at',
@@ -89,6 +90,11 @@ class Client extends Model
         return $this->hasMany(CreditLedgerEntry::class);
     }
 
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
     public function senderIds(): HasMany
     {
         return $this->hasMany(SenderId::class);
@@ -127,6 +133,11 @@ class Client extends Model
     public function defaultProvider(): BelongsTo
     {
         return $this->belongsTo(SmsProvider::class, 'default_provider_id');
+    }
+
+    public function defaultSenderId(): BelongsTo
+    {
+        return $this->belongsTo(SenderId::class, 'default_sender_id_id');
     }
 
     public function isActive(): bool

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\LedgerEntryType;
+use App\Enums\PaymentMethod;
 use App\Models\Client;
 use App\Models\CreditLedgerEntry;
 use App\Models\User;
@@ -23,8 +24,9 @@ class CreditLedgerService
         ?User $actor = null,
         ?Model $related = null,
         array $meta = [],
+        ?PaymentMethod $paymentMethod = null,
     ): CreditLedgerEntry {
-        return $this->record($client, LedgerEntryType::Credit, abs($amount), $reason, $actor, $related, $meta);
+        return $this->record($client, LedgerEntryType::Credit, abs($amount), $reason, $actor, $related, $meta, paymentMethod: $paymentMethod);
     }
 
     public function debit(
@@ -34,8 +36,9 @@ class CreditLedgerService
         ?User $actor = null,
         ?Model $related = null,
         array $meta = [],
+        ?PaymentMethod $paymentMethod = null,
     ): CreditLedgerEntry {
-        return $this->record($client, LedgerEntryType::Debit, abs($amount), $reason, $actor, $related, $meta);
+        return $this->record($client, LedgerEntryType::Debit, abs($amount), $reason, $actor, $related, $meta, paymentMethod: $paymentMethod);
     }
 
     public function adjust(
@@ -44,10 +47,11 @@ class CreditLedgerService
         string $reason,
         ?User $actor = null,
         array $meta = [],
+        ?PaymentMethod $paymentMethod = null,
     ): CreditLedgerEntry {
         $type = $signedAmount >= 0 ? LedgerEntryType::Adjustment : LedgerEntryType::Debit;
 
-        return $this->record($client, $type, abs($signedAmount), $reason, $actor, null, $meta, allowNegative: true);
+        return $this->record($client, $type, abs($signedAmount), $reason, $actor, null, $meta, allowNegative: true, paymentMethod: $paymentMethod);
     }
 
     protected function record(
@@ -59,12 +63,13 @@ class CreditLedgerService
         ?Model $related,
         array $meta,
         bool $allowNegative = false,
+        ?PaymentMethod $paymentMethod = null,
     ): CreditLedgerEntry {
         if ($amount <= 0) {
             throw new InvalidArgumentException('Ledger amount must be greater than zero.');
         }
 
-        return DB::transaction(function () use ($client, $type, $amount, $reason, $actor, $related, $meta, $allowNegative) {
+        return DB::transaction(function () use ($client, $type, $amount, $reason, $actor, $related, $meta, $allowNegative, $paymentMethod) {
             /** @var Client $locked */
             $locked = Client::query()->whereKey($client->id)->lockForUpdate()->firstOrFail();
 
@@ -93,9 +98,13 @@ class CreditLedgerService
             $locked->sms_balance = $after;
             $locked->save();
 
+            $resolvedMethod = $paymentMethod
+                ?? (isset($meta['payment_method']) ? PaymentMethod::tryFrom((string) $meta['payment_method']) : null);
+
             $entry = CreditLedgerEntry::query()->create([
                 'client_id' => $locked->id,
                 'type' => $type,
+                'payment_method' => $resolvedMethod,
                 'amount' => $amount,
                 'balance_before' => $before,
                 'balance_after' => $after,

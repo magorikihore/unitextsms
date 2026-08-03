@@ -26,7 +26,7 @@ class TeamController extends Controller
         ]);
     }
 
-    public function store(Request $request, Client $client): RedirectResponse
+    public function store(Request $request, Client $client): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -50,6 +50,6 @@ class TeamController extends Controller
 
         $this->auditLogger->log('team.member.added', $user, null, ['role' => $data['role']], $request->user(), $client->id);
 
-        return back()->with('success', 'Team member added.');
+        return $this->ajaxRedirect($request, route('client.team.index', $client), 'Team member added.');
     }
 }

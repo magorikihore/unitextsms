@@ -1,6 +1,7 @@
 <x-portal-layout title="Edit client" portalLabel="Administration" header="Edit {{ $client->company_name }}" :nav="\App\Support\PortalNav::admin('clients')">
-    <form method="POST" action="{{ route('admin.clients.update', $client) }}" class="table-wrap max-w-3xl space-y-4 p-6">
+    <form method="POST" action="{{ route('admin.clients.update', $client) }}" data-ajax class="table-wrap max-w-3xl space-y-4 p-6" novalidate>
         @csrf @method('PUT')
+        <div data-form-error class="hidden rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-700"></div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <label class="text-sm font-medium">Company name</label>

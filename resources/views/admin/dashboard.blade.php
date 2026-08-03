@@ -1,26 +1,29 @@
-<x-portal-layout title="Admin" portalLabel="Administration" header="Platform Dashboard" subheader="Live client, traffic and billing overview" :nav="\App\Support\PortalNav::admin('dashboard')">
+<x-portal-layout title="Admin" portalLabel="Administration" header="Platform Dashboard" subheader="Live client, traffic and billing overview" icon="dashboard" :nav="\App\Support\PortalNav::admin('dashboard')">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat label="Total clients" :value="$totalClients" />
-        <x-stat label="Active clients" :value="$activeClients" tone="ok" />
-        <x-stat label="Suspended" :value="$suspendedClients" tone="warn" />
-        <x-stat label="Queue size" :value="$queueSize" />
-        <x-stat label="SMS today" :value="number_format($smsToday)" />
-        <x-stat label="SMS this month" :value="number_format($smsMonth)" />
-        <x-stat label="Delivered today" :value="number_format($delivered)" tone="ok" />
-        <x-stat label="Failed today" :value="number_format($failed)" tone="bad" />
-        <x-stat label="Delivery rate" :value="$deliveryRate.'%'" />
-        <x-stat label="OTP avg speed" :value="($otpAvgMs ?: 0).' ms'" />
-        <x-stat label="Provider balance" :value="number_format($providerBalance, 2)" />
-        <x-stat label="Client balances" :value="number_format($clientBalances, 2)" />
-        <x-stat label="Revenue (month)" :value="number_format($revenue, 2)" tone="ok" />
-        <x-stat label="Provider cost" :value="number_format($providerCost, 2)" />
-        <x-stat label="Gross profit" :value="number_format($profit, 2)" tone="ok" />
-        <x-stat label="Pending today" :value="number_format($pending)" tone="warn" />
+        <x-stat icon="clients" label="Total clients" :value="$totalClients" tint="sky" />
+        <x-stat icon="clients" label="Active clients" :value="$activeClients" tone="ok" tint="emerald" />
+        <x-stat icon="clients" label="Suspended" :value="$suspendedClients" tone="warn" tint="amber" />
+        <x-stat icon="queue" label="Queue size" :value="$queueSize" tint="violet" />
+        <x-stat icon="send" label="SMS today" :value="number_format($smsToday)" tint="teal" />
+        <x-stat icon="chart" label="SMS this month" :value="number_format($smsMonth)" tint="sky" />
+        <x-stat icon="delivered" label="Delivered today" :value="number_format($delivered)" tone="ok" tint="emerald" />
+        <x-stat icon="failed" label="Failed today" :value="number_format($failed)" tone="bad" tint="rose" />
+        <x-stat icon="chart" label="Delivery rate" :value="$deliveryRate.'%'" tint="teal" />
+        <x-stat icon="otp" label="OTP avg speed" :value="($otpAvgMs ?: 0).' ms'" tint="violet" />
+        <x-stat icon="providers" label="Provider balance" :value="number_format($providerBalance, 2)" tint="sky" />
+        <x-stat icon="balance" label="Client balances" :value="number_format($clientBalances, 2)" tint="slate" />
+        <x-stat icon="revenue" label="Revenue (month)" :value="number_format($revenue, 2)" tone="ok" tint="emerald" />
+        <x-stat icon="payments" label="Provider cost" :value="number_format($providerCost, 2)" tint="amber" />
+        <x-stat icon="revenue" label="Gross profit" :value="number_format($profit, 2)" tone="ok" tint="teal" />
+        <x-stat icon="pending" label="Pending today" :value="number_format($pending)" tone="warn" tint="amber" />
     </div>
 
     <div class="mt-8 grid gap-6 lg:grid-cols-2">
         <section class="table-wrap p-5">
-            <h2 class="text-lg font-semibold">System alerts</h2>
+            <h2 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <span class="text-amber-300"><x-icon name="alerts" class="h-5 w-5" /></span>
+                System alerts
+            </h2>
             <div class="mt-4 space-y-3">
                 @forelse($alerts as $alert)
                     <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
@@ -34,7 +37,10 @@
         </section>
 
         <section class="table-wrap p-5">
-            <h2 class="text-lg font-semibold">Top client balances</h2>
+            <h2 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <span class="text-teal-300"><x-icon name="balance" class="h-5 w-5" /></span>
+                Top client balances
+            </h2>
             <div class="mt-4 divide-y divide-slate-100">
                 @foreach($topClients as $c)
                     <div class="flex items-center justify-between py-2 text-sm">

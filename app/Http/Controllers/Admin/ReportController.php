@@ -35,7 +35,7 @@ class ReportController extends Controller
         return view('admin.reports.index', [
             'messages' => $query->latest()->paginate(50)->withQueryString(),
             'stats' => $stats,
-            'clients' => Client::query()->orderBy('company_name')->get(['id', 'company_name']),
+            'clients' => Client::query()->orderBy('company_name')->get(['id', 'company_name', 'contact_email', 'contact_phone', 'sms_balance']),
             'providers' => SmsProvider::query()->orderBy('name')->get(['id', 'name']),
             'filters' => $request->all(),
         ]);

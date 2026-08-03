@@ -1,0 +1,63 @@
+{
+  "exported_at": "2026-08-01T20:00:00+00:00",
+  "source": "unitxt",
+  "clients": [
+    {
+      "user": {
+        "id": 9001,
+        "uid": "sampleuid1",
+        "email": "pilot.client@example.test",
+        "password": "$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "first_name": "Pilot",
+        "last_name": "Client",
+        "status": 1,
+        "sms_unit": "125.50",
+        "timezone": "Africa/Dar_es_Salaam",
+        "created_at": "2024-01-01 10:00:00"
+      },
+      "customer": {
+        "id": 8001,
+        "uid": "custuid1",
+        "company": "Pilot Co Ltd",
+        "website": "https://pilot.example",
+        "address": "Mikocheni",
+        "city": "Dar es Salaam",
+        "postcode": null,
+        "state": null,
+        "country": "Tanzania",
+        "phone": "0758460813",
+        "tax_number": null
+      },
+      "sender_ids": [
+        {
+          "id": 1,
+          "sender_id": "PILOT",
+          "status": "active",
+          "validity_date": null
+        },
+        {
+          "id": 2,
+          "sender_id": "OLDPILOT",
+          "status": "block",
+          "validity_date": null
+        }
+      ],
+      "contacts": [
+        {
+          "id": 1,
+          "phone": "0758460813",
+          "first_name": "Asha",
+          "last_name": "Juma",
+          "email": null
+        },
+        {
+          "id": 2,
+          "phone": "bad-number",
+          "first_name": "Skip",
+          "last_name": "Me",
+          "email": null
+        }
+      ]
+    }
+  ]
+}

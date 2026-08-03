@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Template;
 use App\Services\AuditLogger;
 use App\Services\SmsCounter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,7 +30,7 @@ class TemplateController extends Controller
         ]);
     }
 
-    public function store(Request $request, Client $client): RedirectResponse
+    public function store(Request $request, Client $client): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -49,6 +50,10 @@ class TemplateController extends Controller
 
         $this->auditLogger->log('template.created', $template, null, $template->toArray(), $request->user(), $client->id);
 
-        return back()->with('success', 'Template submitted for approval ('.$this->smsCounter->units($data['body']).' SMS unit(s)).');
+        return $this->ajaxRedirect(
+            $request,
+            route('client.templates.index', $client),
+            'Template submitted for approval ('.$this->smsCounter->units($data['body']).' SMS unit(s)).',
+        );
     }
 }

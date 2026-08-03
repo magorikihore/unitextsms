@@ -1,10 +1,12 @@
 <x-portal-layout title="New client" portalLabel="Administration" header="Create client" :nav="\App\Support\PortalNav::admin('clients')">
-    <form method="POST" action="{{ route('admin.clients.store') }}" class="table-wrap max-w-3xl space-y-4 p-6">
+    <form method="POST" action="{{ route('admin.clients.store') }}" data-ajax class="table-wrap max-w-3xl space-y-4 p-6" novalidate>
         @csrf
+        <div data-form-error class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <label class="text-sm font-medium">Company name</label>
                 <input name="company_name" class="input-field mt-1" value="{{ old('company_name') }}" required>
+                <p data-error-for="company_name" class="mt-1 hidden text-sm text-red-600"></p>
             </div>
             <div>
                 <label class="text-sm font-medium">Trading name</label>
@@ -17,6 +19,7 @@
             <div>
                 <label class="text-sm font-medium">Contact email</label>
                 <input type="email" name="contact_email" class="input-field mt-1" value="{{ old('contact_email') }}" required>
+                <p data-error-for="contact_email" class="mt-1 hidden text-sm text-red-600"></p>
             </div>
             <div>
                 <label class="text-sm font-medium">Contact phone</label>
@@ -57,6 +60,6 @@
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="can_send_marketing" value="1"> Marketing</label>
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="api_enabled" value="1"> API access</label>
         </div>
-        <button class="btn-primary">Create client</button>
+        <button type="submit" data-loading-text="Creating…" class="btn-primary">Create client</button>
     </form>
 </x-portal-layout>

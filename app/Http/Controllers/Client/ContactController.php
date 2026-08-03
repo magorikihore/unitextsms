@@ -28,7 +28,7 @@ class ContactController extends Controller
         ]);
     }
 
-    public function store(Request $request, Client $client): RedirectResponse
+    public function store(Request $request, Client $client): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'phone' => ['required', 'string'],
@@ -39,7 +39,9 @@ class ContactController extends Controller
 
         $normalized = $this->phoneNormalizer->normalize($data['phone']);
         if (! $normalized) {
-            return back()->withErrors(['phone' => 'Invalid Tanzanian mobile number.']);
+            return $this->ajaxBack($request, 'Invalid Tanzanian mobile number.', [
+                'phone' => 'Invalid Tanzanian mobile number.',
+            ]);
         }
 
         Contact::query()->updateOrCreate(
@@ -54,10 +56,10 @@ class ContactController extends Controller
             ]
         );
 
-        return back()->with('success', 'Contact saved.');
+        return $this->ajaxRedirect($request, route('client.contacts.index', $client), 'Contact saved.');
     }
 
-    public function import(Request $request, Client $client): RedirectResponse
+    public function import(Request $request, Client $client): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls'],
@@ -65,6 +67,10 @@ class ContactController extends Controller
 
         $batch = $this->importService->import($client, $request->user(), $request->file('file'));
 
-        return back()->with('success', "Import complete: {$batch->imported} imported, {$batch->duplicates} duplicates, {$batch->invalid} invalid.");
+        return $this->ajaxRedirect(
+            $request,
+            route('client.contacts.index', $client),
+            "Import complete: {$batch->imported} imported, {$batch->duplicates} duplicates, {$batch->invalid} invalid.",
+        );
     }
 }

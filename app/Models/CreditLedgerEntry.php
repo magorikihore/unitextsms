@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LedgerEntryType;
+use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -14,6 +15,7 @@ class CreditLedgerEntry extends Model
     protected $fillable = [
         'client_id',
         'type',
+        'payment_method',
         'amount',
         'balance_before',
         'balance_after',
@@ -29,6 +31,7 @@ class CreditLedgerEntry extends Model
     {
         return [
             'type' => LedgerEntryType::class,
+            'payment_method' => PaymentMethod::class,
             'amount' => 'decimal:2',
             'balance_before' => 'decimal:2',
             'balance_after' => 'decimal:2',

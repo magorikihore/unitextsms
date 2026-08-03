@@ -8,8 +8,8 @@
         </select>
         <select name="category" class="input-field max-w-[10rem]">
             <option value="">Category</option>
-            @foreach(['otp','transactional','alert','marketing'] as $cat)
-                <option value="{{ $cat }}" @selected(request('category')===$cat)>{{ $cat }}</option>
+            @foreach(['otp' => 'OTP', 'transactional' => 'Transactional', 'alert' => 'Alert', 'marketing' => 'Bulk SMS'] as $cat => $catLabel)
+                <option value="{{ $cat }}" @selected(request('category')===$cat)>{{ $catLabel }}</option>
             @endforeach
         </select>
         <input type="date" name="from" class="input-field max-w-[12rem]" value="{{ request('from') }}">
@@ -25,6 +25,7 @@
                 <th class="px-4 py-3">Sender</th>
                 <th class="px-4 py-3">Category</th>
                 <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Failure</th>
                 <th class="px-4 py-3">Units</th>
             </tr>
             </thead>
@@ -35,7 +36,14 @@
                     <td class="px-4 py-3">{{ $message->to_phone_normalized }}</td>
                     <td class="px-4 py-3">{{ $message->from_sender }}</td>
                     <td class="px-4 py-3">{{ $message->category->value }}</td>
-                    <td class="px-4 py-3">{{ $message->status->value }}</td>
+                    <td class="px-4 py-3">
+                        <span class="{{ $message->status->value === 'failed' || $message->status->value === 'rejected' ? 'text-red-700 font-medium' : '' }}">
+                            {{ $message->status->value }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm {{ $message->failure_reason ? 'text-red-700' : 'text-slate-400' }}">
+                        {{ \App\Support\SmsStatusPresenter::humanize($message->failure_reason) ?: '—' }}
+                    </td>
                     <td class="px-4 py-3">{{ $message->units }}</td>
                 </tr>
             @endforeach

@@ -20,6 +20,7 @@ class User extends Authenticatable
         'email',
         'password',
         'platform_role',
+        'department',
         'is_active',
         'two_factor_enabled',
         'two_factor_secret',

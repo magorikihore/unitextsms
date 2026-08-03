@@ -1,0 +1,17 @@
+[Unit]
+Description=Forward Jasmin SMSC submit errors to UniNText panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/jasmin-submit-error-watcher.py
+Restart=always
+RestartSec=3
+Environment=JASMIN_MESSAGES_LOG=/var/log/jasmin/messages.log
+Environment=UNITEXT_SUBMIT_ERROR_URL=https://sms.triptz.net/dlr/jasmin-submit-error
+Environment=JASMIN_SUBMIT_ERROR_STATE=/var/lib/jasmin-submit-error-watcher.offset
+
+[Install]
+WantedBy=multi-user.target

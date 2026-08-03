@@ -5,20 +5,27 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\BillingType;
 use App\Enums\ClientRole;
 use App\Enums\ClientStatus;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\SmsProvider;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\CreditLedgerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
+use Throwable;
 
 class ClientController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly CreditLedgerService $ledger,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -65,7 +72,11 @@ class ClientController extends Controller
 
         $this->auditLogger->log('client.created', $client, null, $client->toArray(), $request->user(), $client->id);
 
-        return redirect()->route('admin.clients.show', $client)->with('success', 'Client created.');
+        return $this->ajaxRedirect(
+            $request,
+            route('admin.clients.show', $client),
+            'Client created.',
+        );
     }
 
     public function show(Client $client): View
@@ -86,13 +97,13 @@ class ClientController extends Controller
         ]);
     }
 
-    public function update(Request $request, Client $client): RedirectResponse
+    public function update(Request $request, Client $client): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $old = $client->toArray();
         $client->update($this->validated($request));
         $this->auditLogger->log('client.updated', $client, $old, $client->fresh()->toArray(), $request->user(), $client->id);
 
-        return back()->with('success', 'Client updated.');
+        return $this->ajaxRedirect($request, route('admin.clients.edit', $client), 'Client updated.');
     }
 
     public function approve(Request $request, Client $client): RedirectResponse
@@ -112,7 +123,97 @@ class ClientController extends Controller
         $client->update(['status' => ClientStatus::Suspended]);
         $this->auditLogger->log('client.suspended', $client, null, ['status' => 'suspended'], $request->user(), $client->id);
 
-        return back()->with('success', 'Client suspended.');
+        return $this->ajaxBack($request, 'Client deactivated.');
+    }
+
+    public function activate(Request $request, Client $client): RedirectResponse
+    {
+        $client->update([
+            'status' => ClientStatus::Active,
+            'approved_at' => $client->approved_at ?: now(),
+            'approved_by' => $client->approved_by ?: $request->user()->id,
+        ]);
+        $this->auditLogger->log('client.activated', $client, null, ['status' => 'active'], $request->user(), $client->id);
+
+        return $this->ajaxBack($request, 'Client activated.');
+    }
+
+    public function adjustCredits(Request $request, Client $client): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', 'in:credit,debit'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'reason' => ['required', 'string', 'max:255'],
+            'payment_method' => [
+                Rule::requiredIf(fn () => $request->input('action') === 'credit'),
+                'nullable',
+                Rule::in([PaymentMethod::Cash->value, PaymentMethod::Bank->value]),
+            ],
+        ]);
+
+        try {
+            if ($data['action'] === 'credit') {
+                $method = PaymentMethod::from($data['payment_method']);
+                $this->ledger->credit(
+                    $client,
+                    (float) $data['amount'],
+                    $data['reason'],
+                    $request->user(),
+                    null,
+                    ['payment_method' => $method->value, 'source' => 'admin_manual'],
+                    $method,
+                );
+                $message = 'Credit added to ledger.';
+            } else {
+                $this->ledger->debit($client, (float) $data['amount'], $data['reason'], $request->user());
+                $message = 'Credit removed from ledger.';
+            }
+        } catch (Throwable $e) {
+            return $this->ajaxBack($request, $e->getMessage(), ['amount' => $e->getMessage()]);
+        }
+
+        return $this->ajaxRedirect($request, route('admin.clients.show', $client), $message);
+    }
+
+    public function resetUserPassword(Request $request, Client $client, User $user): RedirectResponse
+    {
+        abort_unless($client->users()->where('users.id', $user->id)->exists(), 404);
+        abort_if($user->isPlatformUser(), 403, 'Cannot reset a platform admin password here.');
+
+        $data = $request->validate([
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user->update([
+            'password' => $data['password'],
+            'is_active' => true,
+        ]);
+
+        $this->auditLogger->log('client.user.password_reset', $user, null, [
+            'client_id' => $client->id,
+            'email' => $user->email,
+        ], $request->user(), $client->id);
+
+        return $this->ajaxBack($request, 'Password reset for '.$user->email.'.');
+    }
+
+    public function toggleUser(Request $request, Client $client, User $user): RedirectResponse
+    {
+        abort_unless($client->users()->where('users.id', $user->id)->exists(), 404);
+
+        $active = ! (bool) $user->pivot->is_active;
+        $client->users()->updateExistingPivot($user->id, ['is_active' => $active]);
+
+        if (! $user->isPlatformUser()) {
+            $user->update(['is_active' => $active]);
+        }
+
+        $this->auditLogger->log('client.user.'.($active ? 'activated' : 'deactivated'), $user, null, [
+            'client_id' => $client->id,
+            'is_active' => $active,
+        ], $request->user(), $client->id);
+
+        return $this->ajaxBack($request, $active ? 'User activated.' : 'User deactivated.');
     }
 
     protected function validated(Request $request): array

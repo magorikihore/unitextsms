@@ -1,39 +1,49 @@
-<x-guest-layout>
-    <form method="POST" action="{{ route('password.store') }}">
-        @csrf
+<x-guest-layout title="Reset password">
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-slate-900" style="font-family:'Source Serif 4', Georgia, serif;">Set a new password</h1>
+        <p class="mt-1 text-sm text-slate-500">Choose a strong password for your UniNText account.</p>
+    </div>
 
-        <!-- Password Reset Token -->
+    <form method="POST" action="{{ route('password.store') }}" data-ajax class="space-y-4" novalidate>
+        @csrf
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
-        <!-- Email Address -->
+        <div data-form-error class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+        <div data-form-success class="hidden rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"></div>
+
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="text-sm font-medium text-slate-700">Email address</label>
+            <input
+                id="email"
+                type="email"
+                name="email"
+                value="{{ old('email', $request->email) }}"
+                required
+                autofocus
+                autocomplete="username"
+                class="input-field mt-1.5"
+            >
+            <p data-error-for="email" class="mt-1.5 hidden text-sm text-red-600"></p>
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div>
+            <label for="password" class="text-sm font-medium text-slate-700">New password</label>
+            <x-password-input name="password" class="mt-1.5" required autocomplete="new-password" placeholder="••••••••" />
+            <p data-error-for="password" class="mt-1.5 hidden text-sm text-red-600"></p>
         </div>
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                                type="password"
-                                name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+        <div>
+            <label for="password_confirmation" class="text-sm font-medium text-slate-700">Confirm password</label>
+            <x-password-input name="password_confirmation" class="mt-1.5" required autocomplete="new-password" placeholder="••••••••" />
+            <p data-error-for="password_confirmation" class="mt-1.5 hidden text-sm text-red-600"></p>
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" data-loading-text="Saving…" class="btn-primary w-full justify-center py-2.5">
+            Reset password
+        </button>
+
+        <p class="text-center text-sm text-slate-500">
+            <a href="{{ route('login') }}" class="font-medium text-teal-700 hover:text-teal-800">Back to sign in</a>
+        </p>
     </form>
 </x-guest-layout>

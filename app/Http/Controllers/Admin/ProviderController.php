@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SmsProvider;
 use App\Models\SmsRoute;
 use App\Services\AuditLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,7 +22,7 @@ class ProviderController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -64,6 +65,6 @@ class ProviderController extends Controller
 
         $this->auditLogger->log('provider.created', $provider, null, ['name' => $provider->name], $request->user());
 
-        return back()->with('success', 'Provider configured.');
+        return $this->ajaxRedirect($request, route('admin.providers.index'), 'Provider configured.');
     }
 }

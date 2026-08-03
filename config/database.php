@@ -64,6 +64,25 @@ return [
             ]) : [],
         ],
 
+        /*
+        | Old Unitext (Ultimate SMS) database — used only by import/export commands.
+        | Prefer SSH tunnel: ssh -L 3307:127.0.0.1:3306 jasmin-gateway
+        */
+        'unitxt_legacy' => [
+            'driver' => 'mysql',
+            'host' => env('UNITXT_LEGACY_DB_HOST', '127.0.0.1'),
+            'port' => env('UNITXT_LEGACY_DB_PORT', '3307'),
+            'database' => env('UNITXT_LEGACY_DB_DATABASE', 'unitxt'),
+            'username' => env('UNITXT_LEGACY_DB_USERNAME', 'unitxt'),
+            'password' => env('UNITXT_LEGACY_DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
