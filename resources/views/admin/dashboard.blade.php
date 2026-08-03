@@ -1,5 +1,14 @@
 <x-portal-layout title="Admin" portalLabel="Administration" header="Platform Dashboard" subheader="Live client, traffic and billing overview" icon="dashboard" :nav="\App\Support\PortalNav::admin('dashboard')">
+    @php
+        $gw = $gatewayHealth ?? ['status' => 'unknown', 'healthy' => true];
+        $gwTone = ($gw['status'] ?? '') === 'ok' ? 'ok' : (($gw['status'] ?? '') === 'degraded' ? 'warn' : 'bad');
+        $gwTint = ($gw['status'] ?? '') === 'ok' ? 'emerald' : (($gw['status'] ?? '') === 'degraded' ? 'amber' : 'rose');
+        $gwHint = ($gw['http_ok'] ?? false)
+            ? (($gw['http_ms'] ?? '—').' ms · '.($gw['recent_gateway_failures'] ?? 0).' gateway fails/hr')
+            : ($gw['http_error'] ?? 'unreachable');
+    @endphp
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <x-stat icon="providers" label="Jasmin gateway" :value="strtoupper($gw['status'] ?? '—')" :tone="$gwTone" :tint="$gwTint" :hint="$gwHint" />
         <x-stat icon="clients" label="Total clients" :value="$totalClients" tint="sky" />
         <x-stat icon="clients" label="Active clients" :value="$activeClients" tone="ok" tint="emerald" />
         <x-stat icon="clients" label="Suspended" :value="$suspendedClients" tone="warn" tint="amber" />

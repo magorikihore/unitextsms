@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Message;
+use App\Services\JasminGatewayHealth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
@@ -49,6 +50,7 @@ class TrafficController extends Controller
             'rateLimits' => config('sms.rate_limits'),
             'bulkPaused' => Cache::get('sms:bulk:paused'),
             'otpLatencyMs' => (int) Cache::get('sms:otp:avg_latency_ms', 0),
+            'gatewayHealth' => app(JasminGatewayHealth::class)->snapshot(),
         ]);
     }
 }

@@ -14,6 +14,7 @@ use App\Models\SmsProvider;
 use App\Models\SystemAlert;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Services\JasminGatewayHealth;
 
 class DashboardController extends Controller
 {
@@ -66,6 +67,7 @@ class DashboardController extends Controller
                 ->where('created_at', '>=', $month)
                 ->groupBy('category')
                 ->pluck('total', 'category'),
+            'gatewayHealth' => app(JasminGatewayHealth::class)->snapshot(),
         ]);
     }
 }

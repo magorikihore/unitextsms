@@ -3,6 +3,7 @@
 namespace App\Services\Sms;
 
 use App\Models\Message;
+use App\Services\JasminGatewayHealth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -46,11 +47,16 @@ class JasminHttpSmsProvider implements SmsProviderContract
                     'body' => mb_substr($body, 0, 500),
                     'error' => $parsed['error'] ?? null,
                 ]);
+
+                if ($this->looksLikeGatewayFailure((string) ($parsed['error'] ?? $body))) {
+                    app(JasminGatewayHealth::class)->recordGatewayFailure((string) ($parsed['error'] ?? 'Jasmin send rejected'));
+                }
             }
 
             return $parsed;
         } catch (\Throwable $e) {
             Log::error('Jasmin send exception', ['error' => $e->getMessage(), 'message' => $message->uuid]);
+            app(JasminGatewayHealth::class)->recordGatewayFailure($e->getMessage());
 
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -124,5 +130,10 @@ class JasminHttpSmsProvider implements SmsProviderContract
         }
 
         return 'Jasmin gateway rejected the submit';
+    }
+
+    protected function looksLikeGatewayFailure(string $error): bool
+    {
+        return (bool) preg_match('/\b(Gateway|Jasmin|PRECONDITION_FAILED|ChannelClosed|Failure instance)\b/i', $error);
     }
 }

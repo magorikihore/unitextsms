@@ -1,0 +1,4 @@
+# Fixed: previous file had a broken line-wrap that made sudoers unparsable.
+# Allow dvidev to publish jasmin-health status files without a password.
+
+dvidev ALL=(root) NOPASSWD: /usr/bin/install -o root -g root -m 755 /var/www/unitxt/public/jasmin-health/*

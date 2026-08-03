@@ -5,11 +5,27 @@
         </div>
     @endif
 
-    <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @php $gw = $gatewayHealth ?? null; @endphp
+    @if($gw && !($gw['healthy'] ?? true))
+        <div class="mb-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            Jasmin gateway {{ strtoupper($gw['status'] ?? 'down') }}:
+            {{ $gw['http_error'] ?? (($gw['recent_gateway_failures'] ?? 0).' gateway failures in the last hour') }}
+        </div>
+    @endif
+
+    <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach($queues as $name => $count)
             <x-stat :label="$name" :value="$count.' queued'" :hint="($rateLimits[$name] ?? '—').' TPS reserved'" />
         @endforeach
         <x-stat label="OTP avg latency" :value="$otpLatencyMs.' ms'" />
+        @if($gw)
+            <x-stat
+                label="Jasmin gateway"
+                :value="strtoupper($gw['status'] ?? '—')"
+                :tone="($gw['healthy'] ?? false) ? 'ok' : 'bad'"
+                :hint="($gw['http_ok'] ?? false) ? (($gw['http_ms'] ?? '—').' ms') : ($gw['http_error'] ?? 'down')"
+            />
+        @endif
     </div>
 
     <form method="GET" action="{{ route('admin.traffic.index') }}" class="table-wrap mb-4 p-3">

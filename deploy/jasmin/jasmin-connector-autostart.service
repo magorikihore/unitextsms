@@ -1,0 +1,10 @@
+[Unit]
+Description=Auto-start Jasmin SMPP connector (tigo_route)
+After=jasmind.service
+Requires=jasmind.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 8
+ExecStart=/usr/local/bin/jasmin-start-connector.sh
+TimeoutStartSec=90

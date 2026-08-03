@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::job(new LaunchScheduledCampaigns)->everyMinute();
+Schedule::command('sms:jasmin-health --fresh')->everyTwoMinutes();
